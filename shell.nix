@@ -51,6 +51,7 @@ pkgs.mkShell rec {
     # Easier toml file manipulations via `tomlq` for quick
     # experiments when needed.
     rustup
+    aoc-cli
   ];
   # Avoid polluting home dir with local project stuff.
   RUSTUP_HOME = toString ./.rustup;
@@ -73,7 +74,6 @@ pkgs.mkShell rec {
     # Ensures our windows target is added via rustup.
     rustup target add "${rustBuildTargetTriple}"
     rustup default stable
-    cargo install aoc-cli --version 0.12.0
     '';
   RUSTFLAGS = (builtins.map (a: ''-L ${a}/lib'') [
   ]);
