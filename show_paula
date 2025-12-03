@@ -1,0 +1,85 @@
+
+running 2 tests
+test tests::test_part_one ... ok
+test tests::test_part_two ... FAILED
+
+failures:
+
+---- tests::test_part_two stdout ----
+Line···>987654321111111
+  Found>9               
+  Found> 8              
+  Found>  7             
+  Found>   6            
+  Found>    5           
+  Found>     4          
+  Found>      3         
+  Found>       2        
+  Found>              1 
+  Found>        1       
+  Found>         1      
+  Found>          1     
+|======= 987654321111111
+|======= 98765432111   1            
+
+Line···>811111111111119
+  Found>              9 
+  Found>8               
+  Found> 1              
+  Found>  1             
+  Found>   1            
+  Found>    1           
+  Found>     1          
+  Found>      1         
+  Found>       1        
+  Found>        1       
+  Found>         1      
+  Found>          1     
+|======= 811111111111119
+|======= 81111111111   9            
+
+Line···>234234234234278
+  Found>              8 
+  Found>             7  
+  Found>  4             
+  Found>     4          
+  Found>        4       
+  Found>           4    
+  Found> 3              
+  Found>    3           
+  Found>       3        
+  Found>          3     
+  Found>2               
+  Found>   2            
+|======= 234234234234278
+|======= 234234 34 34 78            
+
+Line···>818181911112111
+  Found>      9         
+  Found>8               
+  Found>  8             
+  Found>    8           
+  Found>           2    
+  Found> 1              
+  Found>   1            
+  Found>     1          
+  Found>       1        
+  Found>              1 
+  Found>        1       
+  Found>         1      
+|======= 818181911112111
+|======= 8181819111 2  1            
+
+
+thread 'tests::test_part_two' (798907) panicked at src/bin/03.rs:230:9:
+assertion `left == right` failed
+  left: Some(2851181686829)
+ right: Some(3121910778619)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tests::test_part_two
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
