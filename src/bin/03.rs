@@ -106,61 +106,97 @@ pub fn part_two(input: &str) -> Option<u64> {
         println!("Line···>{line_as_string}");
         // Fill the vector, with the 12 highest digits
         // Populate with the leftmost highest digit
-        let leftmost_highest_digit = line
+        let first_highest_digit = line
             .clone()
             .into_iter()
             .enumerate()
             .rev()
             .max_by(|&i_num, &j_num| i_num.1.cmp(&j_num.1))
             .unwrap();
-        highest_12_digits.push(leftmost_highest_digit);
-        let spacey_string =
-            make_spacey_string_from_numbers(vec![leftmost_highest_digit], line_length);
+        highest_12_digits.push(first_highest_digit);
+        let spacey_string = make_spacey_string_from_numbers(vec![first_highest_digit], line_length);
         println!("  Max··>{spacey_string}");
-        'digits_to_add: for _ in 1..12 {
+        let mut wants_to_skip: usize = 0;
+        'main_loop: for d in 1..12 {
+            if wants_to_skip > 0 {
+                wants_to_skip -= 1;
+                continue 'main_loop;
+            }
             // Check the leftmost highest digit, and if there are enough numbers to its right, then no number can be bigger than that
             // if there are enough digits to the right, our number will
             // be highest, if we fill it up with the highest numbers from that side
             // otherwise, find one (1) next highest to the left
-            let mut first_candidate_was_on_right_side = false;
-            'current_highest: for leftmost_highest_digit in highest_12_digits.clone().into_iter() {
-                let next_highest_digit = if (line_length - leftmost_highest_digit.0 - 1) >= 11 {
-                    // We test the highest to the right
-                    first_candidate_was_on_right_side = true;
-                    line.clone()
+            // println!("Currently {d}");
+            let digits_left_to_add = 12 - d;
+            'already_added_digits: for rightmost_highest_digit in
+                highest_12_digits.clone().into_iter().rev()
+            {
+                if (line_length - rightmost_highest_digit.0 - 1) > digits_left_to_add {
+                    // Add first highest to the right
+                    println!(
+                        "Checking next highest number right of {}",
+                        rightmost_highest_digit.1
+                    );
+                    if let Some(next_highest_digit) = line
+                        .clone()
                         .into_iter()
                         .enumerate()
-                        .skip(leftmost_highest_digit.0 + 1)
-                        // .rev()
-                        .filter(|i_num| !highest_12_digits.contains(i_num))
-                        .max_by(|&i_num, &j_num| i_num.1.cmp(&j_num.1))
-                        .unwrap()
-                } else {
-                    // To the right there isn't even enough space, we'll
-                    // need to simply find the highest to the left of us
-                    line.clone()
-                        .into_iter()
-                        .enumerate()
-                        .take(leftmost_highest_digit.0 + 1)
+                        .skip(rightmost_highest_digit.0 + 1)
                         .rev()
                         .filter(|i_num| !highest_12_digits.contains(i_num))
                         .max_by(|&i_num, &j_num| i_num.1.cmp(&j_num.1))
-                        .unwrap()
+                    {
+                        let spacey_string =
+                            make_spacey_string_from_numbers(vec![next_highest_digit], line_length);
+                        // highest_12_digits.sort_by(|&a, &b| a.0.cmp(&b.0));
+                        println!("  Max··>{spacey_string}");
+                        highest_12_digits.push(next_highest_digit);
+                        // Sort them by index
+                        highest_12_digits.sort_by(|&a, &b| a.0.cmp(&b.0));
+                        continue 'main_loop;
+                    }
+                    continue 'already_added_digits;
+                } else {
+                    // To the right there isn't even enough space
+                    // so we just fill up whatever is there.
+                    let mut remaining_to_the_right: Vec<(usize, u8)> = line
+                        .clone()
+                        .into_iter()
+                        .enumerate()
+                        .skip(rightmost_highest_digit.0 + 1)
+                        .filter(|i_num| !highest_12_digits.contains(i_num))
+                        .collect();
+                    let total_to_append = remaining_to_the_right.len();
+                    print!("  =>{}", rightmost_highest_digit.1);
+                    if total_to_append < 1 {
+                        println!("X");
+                        continue 'already_added_digits;
+                    }
+                    println!("  =>{:?}", remaining_to_the_right);
+                    highest_12_digits.append(&mut remaining_to_the_right);
+                    highest_12_digits.sort_by(|&a, &b| a.0.cmp(&b.0));
+                    wants_to_skip += total_to_append - 1;
+                    continue 'main_loop;
                 };
-                if first_candidate_was_on_right_side {
-                    // First candidate was on the right side, but was it at least as high, as whatever is right to it?
-                    // if
-                }
-                let spacey_string =
-                    make_spacey_string_from_numbers(vec![next_highest_digit], line_length);
-                // highest_12_digits.sort_by(|&a, &b| a.0.cmp(&b.0));
-                println!("  Max··>{spacey_string}");
-                highest_12_digits.push(next_highest_digit);
-                // Sort them by index
-                highest_12_digits.sort_by(|&a, &b| a.0.cmp(&b.0));
-                // Found digit, get another one
-                continue 'digits_to_add;
             }
+            // If we landed here, is because there are not enough digits to the left of us, so we need to add the next highest number we find
+            // and keep on trying
+            let next_highest_digit = line
+                .clone()
+                .into_iter()
+                .enumerate()
+                .rev()
+                .filter(|i_num| !highest_12_digits.contains(i_num))
+                .max_by(|&i_num, &j_num| i_num.1.cmp(&j_num.1))
+                .unwrap();
+
+            let spacey_string =
+                make_spacey_string_from_numbers(vec![next_highest_digit], line_length);
+            // highest_12_digits.sort_by(|&a, &b| a.0.cmp(&b.0));
+            println!("  Max··>{spacey_string}");
+            highest_12_digits.push(next_highest_digit);
+            // Sort them by index
+            highest_12_digits.sort_by(|&a, &b| a.0.cmp(&b.0));
         }
 
         let sorted_digits: Vec<String> = highest_12_digits
