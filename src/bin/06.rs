@@ -1,4 +1,6 @@
-use std::usize;
+use std::{str::Chars, usize};
+use itertools::Itertools;
+
 
 advent_of_code::solution!(6);
 
@@ -36,15 +38,26 @@ pub fn part_one(input: &str) -> Option<u64> {
     Some(result)
 }
 
+fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>> where T: Clone {
+    (0..v[0].len())
+            .map(|i| v.iter().map(|inner| inner[i].clone()).collect::<Vec<T>>())
+            .collect()
+}
+
+fn reverse_columns(v: Vec<Vec<&str>>) -> Vec<Vec<&str>> {
+    v.into_iter().rev().collect()
+}
+
 pub fn part_two(input: &str) -> Option<u64> {
     let mut result = 0;
-    let rows_and_columns: Vec<Vec<&str>> = input
+    let mut rows_and_columns: Vec<Vec<String>> = input
         .split('\n') // we have the rows here
-        .map(|line| line.split_ascii_whitespace().collect())
+        .map(|line| line.chars().map(|c| c.to_string()).collect())
         .collect();
-    let row_length = rows_and_columns[0].len();
-    let all_rows_are_equally_long = rows_and_columns.iter().all(|r| r.len() == row_length);
+    rows_and_columns
+    let total_rows = rows_and_columns.len();
     let mut columns_sum_prods = vec![(0, 1); rows_and_columns[0].len()];
+
     rows_and_columns.into_iter().for_each(|row| {
         row.into_iter()
             .enumerate()
