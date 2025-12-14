@@ -62,6 +62,11 @@ pub fn part_one(input: &str) -> Option<u64> {
     let mut jb_ix_and_connection = jb_ix_and_connection
         .into_iter()
         .enumerate()
+        .sorted_by(|this, other| {
+            junction_boxes[this.0]
+                .distance_to(junction_boxes[this.1])
+                .cmp(junction_boxes[other.0].distance_to(junction_boxes[other.1]))
+        })
         .collect::<Vec<(usize, usize)>>();
     while let Some((current_jb_index, current_jb_connected_to)) = jb_ix_and_connection.pop() {
         let mut current_group: HashSet<usize> = HashSet::new();
