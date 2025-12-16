@@ -21,8 +21,8 @@ impl JBox {
         }
     }
 
-    pub fn length(&self) -> f64 {
-        ((self.x.pow(2) + self.y.pow(2) + self.z.pow(2)) as f64).sqrt()
+    pub fn length(&self) -> u64 {
+        (((self.x.pow(2) + self.y.pow(2) + self.z.pow(2)) as f64).sqrt()) as u64
     }
 
     pub fn vector_to(&self, other: Self) -> Self {
@@ -41,7 +41,7 @@ impl JBox {
         }
     }
 
-    pub fn distance_to(&self, other: Self) -> f64 {
+    pub fn distance_to(&self, other: Self) -> u64 {
         self.vector_to(other).length()
     }
 }
@@ -51,7 +51,7 @@ pub fn part_one(input: &str) -> Option<u64> {
     let mut jb_ix_and_connection = vec![junction_boxes.len(); junction_boxes.len()];
 
     junction_boxes.iter().enumerate().for_each(|(i, jb)| {
-        // Find closest neighbor
+        // Find closest neighbor for each JBox
         let j = junction_boxes
             .iter()
             .position_min_by_key(|&other| other.distance_to(*jb) as u64)
@@ -65,7 +65,7 @@ pub fn part_one(input: &str) -> Option<u64> {
         .sorted_by(|this, other| {
             junction_boxes[this.0]
                 .distance_to(junction_boxes[this.1])
-                .cmp(junction_boxes[other.0].distance_to(junction_boxes[other.1]))
+                .cmp(&junction_boxes[other.0].distance_to(junction_boxes[other.1]))
         })
         .collect::<Vec<(usize, usize)>>();
     while let Some((current_jb_index, current_jb_connected_to)) = jb_ix_and_connection.pop() {
