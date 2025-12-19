@@ -68,8 +68,8 @@ pkgs.mkShell rec {
 
   LIBCLANG_PATH = pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
   shellHook = ''
-    export PATH=$PATH:${CARGO_HOME}/bin
-    export PATH=$PATH:${RUSTUP_HOME}/toolchains/${rustupToolchain}-${rustBuildHostTriple}/bin/
+    export PATH="$PATH:''${CARGO_HOME}/bin"
+    export PATH="$PATH:''${RUSTUP_HOME}/toolchains/${rustupToolchain}-${rustBuildHostTriple}/bin/"
 
     # Ensures our windows target is added via rustup.
     rustup target add "${rustBuildTargetTriple}"
