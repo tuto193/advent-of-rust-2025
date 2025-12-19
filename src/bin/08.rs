@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::Display};
 
 use itertools::Itertools;
 
@@ -46,65 +46,79 @@ impl JBox {
     }
 }
 
+impl Display for JBox {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({},{},{})", self.x, self.y, self.z)
+    }
+}
+
 pub fn part_one(input: &str) -> Option<u64> {
     let junction_boxes: Vec<JBox> = input.split('\n').map(|l| JBox::from_str(l)).collect();
-    let mut jb_ix_and_connection = vec![junction_boxes.len(); junction_boxes.len()];
-
-    junction_boxes.iter().enumerate().for_each(|(i, jb)| {
+    let mut jb_connected_to = vec![junction_boxes.len(); junction_boxes.len()];
+    // Find closes neighbor for each box (this_box's_index, other_box's_index)
+    junction_boxes.iter().enumerate().for_each(|(i, this_jb)| {
         // Find closest neighbor for each JBox
-        let j = junction_boxes
+        let (j, _other_jb) = junction_boxes
             .iter()
-            .position_min_by_key(|&other| other.distance_to(*jb) as u64)
+            .enumerate()
+            .filter(|other| other.0 != i)
+            .min_by_key(|(j, other)| other.distance_to(*this_jb))
             .unwrap();
-        jb_ix_and_connection[i] = j;
+        jb_connected_to[i] = j;
     });
+
     let mut circuits: Vec<HashSet<usize>> = vec![];
-    let mut jb_ix_and_connection = jb_ix_and_connection
+    let mut jb_ix_and_connection = jb_connected_to
         .into_iter()
         .enumerate()
+        .dedup_by(|this, other| this.0 == other.1 && this.1 == other.0)
         .sorted_by(|this, other| {
-            junction_boxes[this.0]
-                .distance_to(junction_boxes[this.1])
-                .cmp(&junction_boxes[other.0].distance_to(junction_boxes[other.1]))
+            let this_distance = junction_boxes[this.0].distance_to(junction_boxes[this.1]);
+            let other_distance = junction_boxes[other.0].distance_to(junction_boxes[other.1]);
+
+            this_distance.cmp(&other_distance)
         })
+        // .take(10)
         .collect::<Vec<(usize, usize)>>();
-    while let Some((current_jb_index, current_jb_connected_to)) = jb_ix_and_connection.pop() {
-        let mut current_group: HashSet<usize> = HashSet::new();
-        current_group.insert(current_jb_index);
-        current_group.insert(current_jb_connected_to);
-        // We popped the last element, so we filter to see what we can add where
-        'current_group: loop {
-            let new_connections_to_add = jb_ix_and_connection
-                .clone()
-                .into_iter()
-                .filter(|(index, connected_to)| {
-                    current_group.contains(&connected_to) ^ current_group.contains(&index)
-                })
-                .collect::<Vec<(usize, usize)>>();
-            if new_connections_to_add.is_empty() {
-                break 'current_group;
-            }
-            new_connections_to_add
-                .into_iter()
-                .for_each(|(new_index, connected_to)| {
-                    current_group.insert(new_index);
-                    current_group.insert(connected_to);
-                });
-        }
-        circuits.push(current_group);
-        let new_connected_to = jb_ix_and_connection
-            .clone()
-            .into_iter()
-            .filter(|(i, connected_to)| {
-                !circuits
-                    .iter()
-                    .any(|g| g.contains(i) || g.contains(connected_to))
-            })
-            .collect::<Vec<(usize, usize)>>();
-        jb_ix_and_connection = new_connected_to;
+    println!("Sorted connections: {jb_ix_and_connection:?}");
+    for (ix, (i, j)) in jb_ix_and_connection.iter().enumerate() {
+        let first = junction_boxes[*i];
+        let second = junction_boxes[*j];
+        println!("--> {ix} -> {first}···{second}");
     }
 
-    println!("{circuits:?}");
+    // Take only the first 10 ones
+    let mut already_taken = 0;
+    // Only connect the first closest
+    while already_taken < 10 {
+        let (current_jb_index, current_jb_connected_to) = jb_ix_and_connection.pop().unwrap();
+        if let Some(_circuit) = circuits
+            .iter()
+            .find(|c| c.contains(&current_jb_index) || c.contains(&current_jb_connected_to))
+        {
+            // None of the current circuits have them inside
+            let c_index = circuits
+                .iter()
+                .position(|c| c.contains(&current_jb_index) || c.contains(&current_jb_connected_to))
+                .unwrap();
+            if circuits[c_index].insert(current_jb_index)
+                || circuits[c_index].insert(current_jb_connected_to)
+            {
+                already_taken += 1;
+            }
+        } else {
+            let mut new_set: HashSet<usize> = HashSet::new();
+            new_set.insert(current_jb_index);
+            new_set.insert(current_jb_connected_to);
+            circuits.push(new_set);
+            already_taken += 1;
+        }
+    }
+
+    println!("Final circuits formed:");
+    for (i, circuit) in circuits.iter().enumerate() {
+        println!("-> Circuit {i} = {circuit:?}");
+    }
 
     Some(
         circuits
@@ -118,69 +132,7 @@ pub fn part_one(input: &str) -> Option<u64> {
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
-    let junction_boxes: Vec<JBox> = input.split('\n').map(|l| JBox::from_str(l)).collect();
-    let mut jb_ix_and_connection = vec![junction_boxes.len(); junction_boxes.len()];
-
-    junction_boxes.iter().enumerate().for_each(|(i, jb)| {
-        // Find closest neighbor
-        let j = junction_boxes
-            .iter()
-            .position_min_by_key(|&other| other.distance_to(*jb) as u64)
-            .unwrap();
-        jb_ix_and_connection[i] = j;
-    });
-    let mut circuits: Vec<HashSet<usize>> = vec![];
-    let mut jb_ix_and_connection = jb_ix_and_connection
-        .into_iter()
-        .enumerate()
-        .collect::<Vec<(usize, usize)>>();
-    while let Some((current_jb_index, current_jb_connected_to)) = jb_ix_and_connection.pop() {
-        let mut current_group: HashSet<usize> = HashSet::new();
-        current_group.insert(current_jb_index);
-        current_group.insert(current_jb_connected_to);
-        // We popped the last element, so we filter to see what we can add where
-        'current_group: loop {
-            let new_connections_to_add = jb_ix_and_connection
-                .clone()
-                .into_iter()
-                .filter(|(index, connected_to)| {
-                    current_group.contains(&connected_to) ^ current_group.contains(&index)
-                })
-                .collect::<Vec<(usize, usize)>>();
-            if new_connections_to_add.is_empty() {
-                break 'current_group;
-            }
-            new_connections_to_add
-                .into_iter()
-                .for_each(|(new_index, connected_to)| {
-                    current_group.insert(new_index);
-                    current_group.insert(connected_to);
-                });
-        }
-        circuits.push(current_group);
-        let new_connected_to = jb_ix_and_connection
-            .clone()
-            .into_iter()
-            .filter(|(i, connected_to)| {
-                !circuits
-                    .iter()
-                    .any(|g| g.contains(i) || g.contains(connected_to))
-            })
-            .collect::<Vec<(usize, usize)>>();
-        jb_ix_and_connection = new_connected_to;
-    }
-
-    println!("{circuits:?}");
-
-    Some(
-        circuits
-            .iter()
-            .map(|g| g.len())
-            .sorted()
-            .rev()
-            .take(3)
-            .product::<usize>() as u64,
-    )
+    None
 }
 
 #[cfg(test)]
