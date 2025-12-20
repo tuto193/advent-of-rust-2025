@@ -119,7 +119,15 @@ pub fn part_one(input: &str) -> Option<u64> {
     for (i, circuit) in circuits.iter().enumerate() {
         println!("-> Circuit {i} = {circuit:?}");
     }
-
+    println!("Largest circuits");
+    for circuit in circuits
+        .iter()
+        .sorted_by(|i, j| i.len().cmp(&j.len()))
+        .rev()
+        .take(3)
+    {
+        println!("{circuit:?}");
+    }
     Some(
         circuits
             .iter()
