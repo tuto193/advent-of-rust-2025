@@ -4,32 +4,49 @@ use itertools::Itertools;
 
 advent_of_code::solution!(8);
 
+#[derive(Eq, Debug, Clone, Copy)]
+struct Connection(usize, usize);
+
+impl PartialEq for Connection {
+    fn eq(&self, other: &Self) -> bool {
+        let low1 = self.0.min(self.1);
+        let low2 = other.0.min(other.1);
+        let hi1 = self.0.max(self.1);
+        let hi2 = other.0.max(other.1);
+        low1 == low2 && hi1 == hi2
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        !self.eq(other)
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct JBox {
-    x: i64,
-    y: i64,
-    z: i64,
+    x: u64,
+    y: u64,
+    z: u64,
 }
 
 impl JBox {
     pub fn from_str(input: &str) -> Self {
         let vals = input.split(',').collect::<Vec<&str>>();
         Self {
-            x: vals[0].parse::<i64>().unwrap(),
-            y: vals[1].parse::<i64>().unwrap(),
-            z: vals[2].parse::<i64>().unwrap(),
+            x: vals[0].parse::<u64>().unwrap(),
+            y: vals[1].parse::<u64>().unwrap(),
+            z: vals[2].parse::<u64>().unwrap(),
         }
     }
 
-    pub fn length(&self) -> u64 {
-        (((self.x.pow(2) + self.y.pow(2) + self.z.pow(2)) as f64).sqrt()) as u64
+    pub fn length_squared(&self) -> u64 {
+        self.x.pow(2) + self.y.pow(2) + self.z.pow(2)
     }
 
-    pub fn vector_to(&self, other: Self) -> Self {
+    pub fn positive_vector_to(&self, other: Self) -> Self {
         Self {
-            x: other.x - self.x,
-            y: other.y - self.y,
-            z: other.z - self.z,
+            x: other.x.abs_diff(self.x),
+            y: other.y.abs_diff(self.y),
+            z: other.z.abs_diff(self.z),
         }
     }
 
@@ -41,8 +58,8 @@ impl JBox {
         }
     }
 
-    pub fn distance_to(&self, other: Self) -> u64 {
-        self.vector_to(other).length()
+    pub fn distance_squared_to(&self, other: Self) -> u64 {
+        self.positive_vector_to(other).length_squared()
     }
 }
 
@@ -54,64 +71,75 @@ impl Display for JBox {
 
 pub fn part_one(input: &str) -> Option<u64> {
     let junction_boxes: Vec<JBox> = input.split('\n').map(|l| JBox::from_str(l)).collect();
-    let mut jb_connected_to = vec![junction_boxes.len(); junction_boxes.len()];
+    let pairs_to_take = 1000;
+    // let mut jb_pairs = vec![(Connection(1001, 1002), u64::MAX); junction_boxes.len().pow(2)];
+    let mut jb_pairs: Vec<(Connection, u64)> = Vec::with_capacity(junction_boxes.len().pow(2));
     // Find closes neighbor for each box (this_box's_index, other_box's_index)
     junction_boxes.iter().enumerate().for_each(|(i, this_jb)| {
-        // Find closest neighbor for each JBox
-        let (j, _other_jb) = junction_boxes
+        // Find all pairs for this box with others
+        let mut all_pairs = junction_boxes
             .iter()
             .enumerate()
-            .filter(|other| other.0 != i)
-            .min_by_key(|(j, other)| other.distance_to(*this_jb))
-            .unwrap();
-        jb_connected_to[i] = j;
+            .filter(|(j, _other)| *j != i)
+            .map(|(j, other)| {
+                let distance = this_jb.distance_squared_to(*other);
+                (Connection(i, j), distance)
+            })
+            .collect::<Vec<_>>();
+        jb_pairs.append(&mut all_pairs);
     });
 
     let mut circuits: Vec<HashSet<usize>> = vec![];
-    let mut jb_ix_and_connection = jb_connected_to
+    let mut jb_ix_and_cx = jb_pairs
         .into_iter()
-        .enumerate()
-        .dedup_by(|this, other| this.0 == other.1 && this.1 == other.0)
         .sorted_by(|this, other| {
-            let this_distance = junction_boxes[this.0].distance_to(junction_boxes[this.1]);
-            let other_distance = junction_boxes[other.0].distance_to(junction_boxes[other.1]);
+            let this_cx_distance = this.1;
+            let other_cx_distance = other.1;
 
-            this_distance.cmp(&other_distance)
+            this_cx_distance.cmp(&other_cx_distance)
         })
-        // .take(10)
-        .collect::<Vec<(usize, usize)>>();
-    println!("Sorted connections: {jb_ix_and_connection:?}");
-    for (ix, (i, j)) in jb_ix_and_connection.iter().enumerate() {
-        let first = junction_boxes[*i];
-        let second = junction_boxes[*j];
-        println!("--> {ix} -> {first}···{second}");
-    }
+        .map(|(c, _len)| c)
+        .dedup()
+        .take(pairs_to_take)
+        .collect::<Vec<Connection>>();
+    jb_ix_and_cx.reverse();
+    while let Some(connection) = jb_ix_and_cx.pop() {
+        let (this_jb, other_jb) = (connection.0, connection.1);
 
-    // Take only the first 10 ones
-    let mut already_taken = 0;
-    // Only connect the first closest
-    while already_taken < 10 {
-        let (current_jb_index, current_jb_connected_to) = jb_ix_and_connection.pop().unwrap();
-        if let Some(_circuit) = circuits
-            .iter()
-            .find(|c| c.contains(&current_jb_index) || c.contains(&current_jb_connected_to))
-        {
-            // None of the current circuits have them inside
-            let c_index = circuits
-                .iter()
-                .position(|c| c.contains(&current_jb_index) || c.contains(&current_jb_connected_to))
-                .unwrap();
-            if circuits[c_index].insert(current_jb_index)
-                || circuits[c_index].insert(current_jb_connected_to)
-            {
-                already_taken += 1;
+        let circ_this_jb = circuits.iter().position(|c| c.contains(&this_jb));
+        let circ_other_jb = circuits.iter().position(|c| c.contains(&other_jb));
+        if circ_this_jb.is_some() && circ_other_jb.is_some() {
+            // Both exist
+            let circ_this_jb = circ_this_jb.unwrap();
+            let circ_other_jb = circ_other_jb.unwrap();
+            if circ_this_jb != circ_other_jb {
+                // They are not in the same group, so merge the groups
+                let this_circuit = circuits[circ_this_jb].clone();
+                let other_circuit = circuits[circ_other_jb].clone();
+                let merged_circuits = this_circuit
+                    .union(&other_circuit)
+                    .map(|n| *n)
+                    .collect::<HashSet<usize>>();
+                // Remove the higher one, then replace the lower one
+                let higher = circ_this_jb.max(circ_other_jb);
+                let lower = circ_this_jb.min(circ_other_jb);
+                circuits.swap_remove(higher);
+                circuits[lower] = merged_circuits;
             }
         } else {
-            let mut new_set: HashSet<usize> = HashSet::new();
-            new_set.insert(current_jb_index);
-            new_set.insert(current_jb_connected_to);
-            circuits.push(new_set);
-            already_taken += 1;
+            // One of them (maybe both) is None
+            if circ_this_jb.is_none() && circ_other_jb.is_none() {
+                // Both are None, so just create a new set with both of this then add them
+                let new_circuit = HashSet::from([this_jb, other_jb]);
+                circuits.push(new_circuit);
+            } else {
+                // Find the already existing circuit
+                let circ_ix = circ_this_jb.unwrap_or(circ_other_jb.unwrap_or(69)); // It's never going to be this 69 :(
+                let mut circuit = circuits[circ_ix].clone();
+                circuit.insert(this_jb);
+                circuit.insert(other_jb);
+                circuits[circ_ix] = circuit;
+            }
         }
     }
 
