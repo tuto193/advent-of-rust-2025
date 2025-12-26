@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 mod utils;
+use crate::utils::point2d::Point2D;
 use crate::utils::shapes::*;
 
 advent_of_code::solution!(9);
@@ -8,8 +9,8 @@ advent_of_code::solution!(9);
 pub fn part_one(input: &str) -> Option<u64> {
     let corners = input
         .split('\n')
-        .map(|c| Node::from(c))
-        .collect::<Vec<Node>>();
+        .map(|c| Point2D::from(c))
+        .collect::<Vec<Point2D>>();
     println!("Corners are: {corners:?}");
     let mut areas = vec![];
     corners.iter().enumerate().for_each(|(i, c1)| {
@@ -27,8 +28,9 @@ pub fn part_one(input: &str) -> Option<u64> {
 pub fn part_two(input: &str) -> Option<u64> {
     let corners = input
         .split('\n')
-        .map(|c| Node::from(c))
-        .collect::<Vec<Node>>();
+        .map(|c| Point2D::from(c))
+        .collect::<Vec<Point2D>>();
+    let polygon = Polygon::from_nodes(&corners);
     // println!("Corners are: {corners:?}");
     let mut rectangles = vec![];
     corners.iter().enumerate().for_each(|(i, c1)| {
@@ -39,18 +41,22 @@ pub fn part_two(input: &str) -> Option<u64> {
             .collect::<Vec<Rect>>();
         rectangles.append(&mut corner_areas);
     });
-    let mut areas_of_those_without_inner_corners = rectangles
+    let mut areas_of_those_without_inner_nodes_or_inside_polygon = rectangles
         .into_iter()
-        .filter(|r| !r.has_nodes_inside(&corners))
+        .filter(|r| !r.has_nodes_inside(&corners) && !polygon.is_rect_in_polygon(r))
         .map(|r| {
             let a = r.area();
             println!("Rect (no corners) with area {a} -> {r:?}");
             a
         })
         .collect::<Vec<u64>>();
-    areas_of_those_without_inner_corners.sort();
-    println!("Final areas: {areas_of_those_without_inner_corners:?}");
-    Some(areas_of_those_without_inner_corners.pop().unwrap())
+    areas_of_those_without_inner_nodes_or_inside_polygon.sort();
+    println!("Final areas: {areas_of_those_without_inner_nodes_or_inside_polygon:?}");
+    Some(
+        areas_of_those_without_inner_nodes_or_inside_polygon
+            .pop()
+            .unwrap(),
+    )
 }
 
 #[cfg(test)]
